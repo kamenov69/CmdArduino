@@ -1,5 +1,8 @@
 == CmdArduino
 
+original source location:
+https://github.com/joshmarinacci/CmdArduino
+
 
 CmdArduino is a small library to parse commands from the Serial port
 or anything else which implements the Stream API.  It is based on the
