@@ -55,8 +55,8 @@ static uint8_t *msg_ptr;
 static cmd_t *cmd_tbl_list, *cmd_tbl;
 
 // text strings for command prompt (stored in flash)
-const char cmd_banner[] PROGMEM = "*************** CMD *******************";
-const char cmd_prompt[] PROGMEM = "CMD >> ";
+//const char cmd_banner[] PROGMEM = "*************** CMD *******************";
+const char cmd_prompt[] PROGMEM = "CMD>>";
 const char cmd_unrecog[] PROGMEM = "CMD: Command not recognized.";
 
 static Stream* stream;
@@ -72,9 +72,13 @@ void cmd_display()
 
     stream->println();
 
-    strcpy_P(buf, cmd_banner);
-    stream->println(buf);
+    //strcpy_P(buf, cmd_banner);
+    //stream->println(buf);
+    //stream->println();
 
+    // Clear the input buffer before a new command
+    // reason: TIVAC bug, esp32??? 
+    while(stream->available()) stream->read();
     strcpy_P(buf, cmd_prompt);
     stream->print(buf);
 }
@@ -94,6 +98,7 @@ void cmd_parse(char *cmd)
     cmd_t *cmd_entry;
 
     fflush(stdout);
+   
 
     // parse the command line statement and break it up into space-delimited
     // strings. the array of strings will be saved in the argv array.
@@ -139,6 +144,13 @@ void cmd_handler()
     switch (c)
     {
     case '\r':
+    case '\n': // Added for telnet and BT 
+    case '#':  // In any case and sests 
+        
+        if(msg == msg_ptr) break; // empty massage is not an error
+                                  // ESP32 generate an error if buffer is empty 
+
+
         // terminate the msg and reset the msg ptr. then send
         // it to the handler for processing.
         *msg_ptr = '\0';
@@ -147,10 +159,10 @@ void cmd_handler()
         msg_ptr = msg;
         break;
 
-    case '\n':
+    //case '\n':
         // ignore newline characters. they usually come in pairs
         // with the \r characters we use for newline detection.
-        break;
+        //break;
 
     case '\b':
         // backspace
@@ -183,6 +195,34 @@ void cmdPoll()
     }
 }
 
+
+#ifdef __EXTRAS__
+/*********************************************************************** */
+/*! 
+    Iterate and print all added commands 
+*/
+/*********************************************************************** */
+
+void _help(int argc, char **argv){
+    cmd_t *cmd_entry;
+    for (cmd_entry = cmd_tbl; cmd_entry != NULL; cmd_entry = cmd_entry->next){
+        stream->println(cmd_entry->cmd);
+    }
+}
+
+/*********************************************************************** */
+/*! 
+    Redirect stream during runtime 
+*/
+/*********************************************************************** */
+void cmdRedirect(Stream *str){
+    stream = str;
+}
+
+
+#endif
+
+
 /**************************************************************************/
 /*!
     Initialize the command line interface. This sets the terminal speed and
@@ -197,8 +237,13 @@ void cmdInit(Stream *str)
 
     // init the command table
     cmd_tbl_list = NULL;
+#ifdef __HELP__
+   cmdAdd("?", _help);
+#endif
 
 }
+
+
 
 /**************************************************************************/
 /*!
