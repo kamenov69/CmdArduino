@@ -56,11 +56,11 @@ static cmd_t *cmd_tbl_list, *cmd_tbl;
 
 // text strings for command prompt (stored in flash)
 //const char cmd_banner[] PROGMEM = "*************** CMD *******************";
-const char cmd_prompt[] PROGMEM = "CMD>>";
-const char cmd_unrecog[] PROGMEM = "CMD: Command not recognized.";
+const char cmd_prompt[] PROGMEM = ">>";
+const char cmd_unrecog[] PROGMEM = "CMD:Command not recognized.";
 
 static Stream* stream;
-
+static bool echo = __INIT__ECHO;
 /**************************************************************************/
 /*!
     Generate the main command prompt
@@ -71,16 +71,17 @@ void cmd_display()
     char buf[50];
 
     stream->println();
-
     //strcpy_P(buf, cmd_banner);
     //stream->println(buf);
     //stream->println();
-
     // Clear the input buffer before a new command
     // reason: TIVAC bug, esp32??? 
     while(stream->available()) stream->read();
-    strcpy_P(buf, cmd_prompt);
-    stream->print(buf);
+    if(echo){
+      strcpy_P(buf, cmd_prompt);
+      stream->print(buf);
+    }
+   
 }
 
 /**************************************************************************/
@@ -111,6 +112,20 @@ void cmd_parse(char *cmd)
     // save off the number of arguments for the particular command.
     argc = i;
 
+#ifdef __ADDRESS__
+    if (!strcmp(argv[0], __ADDRESS__)){
+        for (cmd_entry = cmd_tbl; cmd_entry != NULL; cmd_entry = cmd_entry->next)
+        {
+            if (!strcmp(argv[1], cmd_entry->cmd))
+            {
+                cmd_entry->func(argc-1, argv+1);
+                cmd_display();
+                return;
+            }
+        } 
+    }
+
+#else
     // parse the command table for valid command. used argv[0] which is the
     // actual command name typed in at the prompt
     for (cmd_entry = cmd_tbl; cmd_entry != NULL; cmd_entry = cmd_entry->next)
@@ -122,12 +137,17 @@ void cmd_parse(char *cmd)
             return;
         }
     }
+#endif
 
     // command not recognized. print message and re-generate prompt.
-    strcpy_P(buf, cmd_unrecog);
-    stream->println(buf);
+    if(echo){
+        strcpy_P(buf, cmd_unrecog);
+        stream->println(buf);
+        cmd_display();
 
-    cmd_display();
+    }
+
+    
 }
 
 /**************************************************************************/
@@ -154,7 +174,7 @@ void cmd_handler()
         // terminate the msg and reset the msg ptr. then send
         // it to the handler for processing.
         *msg_ptr = '\0';
-        stream->print("\r\n");
+        if(echo) stream->print("\r\n");
         cmd_parse((char *)msg);
         msg_ptr = msg;
         break;
@@ -166,7 +186,7 @@ void cmd_handler()
 
     case '\b':
         // backspace
-        stream->print(c);
+        if(echo) stream->print(c);
         if (msg_ptr > msg)
         {
             msg_ptr--;
@@ -175,7 +195,7 @@ void cmd_handler()
 
     default:
         // normal character entered. add it to the buffer
-        stream->print(c);
+        if(echo)stream->print(c);
         *msg_ptr++ = c;
         break;
     }
@@ -219,7 +239,12 @@ void cmdRedirect(Stream *str){
     stream = str;
 }
 
-
+void _echo(int argc, char** args){
+    if(argc>1){
+        echo = (bool)strtol(args[1], NULL, 10);
+    }
+    stream->println(echo);
+}
 #endif
 
 
@@ -237,8 +262,9 @@ void cmdInit(Stream *str)
 
     // init the command table
     cmd_tbl_list = NULL;
-#ifdef __HELP__
+#ifdef __EXTRAS__
    cmdAdd("?", _help);
+   cmdAdd("echo", _echo);
 #endif
 
 }

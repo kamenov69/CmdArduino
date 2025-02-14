@@ -47,7 +47,15 @@
                    // runtime steam redirection
 #ifdef __EXTRAS__
 void cmdRedirect(Stream *str);
-#endif 
+//#define __ADDRESS__ "1314"
+ 
+#endif
+
+#ifndef __ADDRESS__
+ #define __INIT__ECHO true
+#else
+ #define __INIT__ECHO false
+#endif
 
 
 // ===============================================
