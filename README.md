@@ -1,3 +1,23 @@
+
+== Added to the original CmdArduino:
+
+1. Addressing capability – if `__ADDRESS__` is defined in the `.h` file, Cmd responds only when addressed.  
+2. Added newline symbols.  
+3. Added `hellp` command.  
+4. Added command for stream redirection.  
+
+
+
+
+
+
+
+
+
+
+
+
+
 == CmdArduino
 
 original source location:
