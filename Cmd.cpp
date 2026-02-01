@@ -316,7 +316,7 @@ Stream* cmdGetStream(void)
     different value in base 10 (decimal) and base 16 (hexadecimal).
 */
 /**************************************************************************/
-uint32_t cmdStr2Num(char *str, uint8_t base)
+int cmdStr2Num(char *str, int base)
 {
     return strtol(str, NULL, base);
 }
